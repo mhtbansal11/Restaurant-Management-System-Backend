@@ -10,7 +10,6 @@ router.get('/', auth, async (req, res) => {
     const { period = 'month', category, status, search } = req.query;
     const restaurantName = req.user.restaurantName;
     
-    // Calculate date range
     const now = new Date();
     let startDate = new Date();
     
@@ -37,21 +36,10 @@ router.get('/', auth, async (req, res) => {
         startDate.setMonth(now.getMonth() - 1);
     }
 
-    // Build query
     let query = { restaurantName };
-    
-    if (period !== 'all') {
-      query.date = { $gte: startDate };
-    }
-    
-    if (category && category !== 'all') {
-      query.category = category;
-    }
-    
-    if (status && status !== 'all') {
-      query.status = status;
-    }
-    
+    if (period !== 'all') query.date = { $gte: startDate };
+    if (category && category !== 'all') query.category = category;
+    if (status && status !== 'all') query.status = status;
     if (search) {
       query.$or = [
         { description: { $regex: search, $options: 'i' } },
@@ -71,296 +59,117 @@ router.get('/', auth, async (req, res) => {
   }
 });
 
-// Get expense by ID
-router.get('/:id', auth, async (req, res) => {
-  try {
-    const expense = await Expense.findOne({
-      _id: req.params.id,
-      restaurantName: req.user.restaurantName
-    }).populate('userId', 'name email');
-
-    if (!expense) {
-      return res.status(404).json({ message: 'Expense not found' });
-    }
-
-    res.json(expense);
-  } catch (error) {
-    console.error('Error fetching expense:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-// Create new expense
-router.post('/', auth, async (req, res) => {
-  try {
-    const {
-      category,
-      description,
-      amount,
-      date,
-      paymentMethod,
-      referenceNumber,
-      vendor,
-      isRecurring,
-      recurringFrequency,
-      status
-    } = req.body;
-
-    const expense = new Expense({
-      userId: req.user.id,
-      restaurantName: req.user.restaurantName,
-      category,
-      description,
-      amount,
-      date: date || new Date(),
-      paymentMethod,
-      referenceNumber,
-      vendor,
-      isRecurring,
-      recurringFrequency,
-      status
-    });
-
-    await expense.save();
-    await expense.populate('userId', 'name email');
-    
-    res.status(201).json(expense);
-  } catch (error) {
-    console.error('Error creating expense:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-// Update expense
-router.put('/:id', auth, async (req, res) => {
-  try {
-    const expense = await Expense.findOneAndUpdate(
-      {
-        _id: req.params.id,
-        restaurantName: req.user.restaurantName
-      },
-      req.body,
-      { new: true, runValidators: true }
-    ).populate('userId', 'name email');
-
-    if (!expense) {
-      return res.status(404).json({ message: 'Expense not found' });
-    }
-
-    res.json(expense);
-  } catch (error) {
-    console.error('Error updating expense:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-// Delete expense
-router.delete('/:id', auth, async (req, res) => {
-  try {
-    const expense = await Expense.findOneAndDelete({
-      _id: req.params.id,
-      restaurantName: req.user.restaurantName
-    });
-
-    if (!expense) {
-      return res.status(404).json({ message: 'Expense not found' });
-    }
-
-    res.json({ message: 'Expense deleted successfully' });
-  } catch (error) {
-    console.error('Error deleting expense:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
 // Get expense statistics
 router.get('/stats/summary', auth, async (req, res) => {
   try {
     const { period = 'month' } = req.query;
     const restaurantName = req.user.restaurantName;
-    
-    // Calculate date range
     const now = new Date();
     let startDate = new Date();
     
     switch (period) {
-      case 'today':
-        startDate.setHours(0, 0, 0, 0);
-        break;
-      case 'week':
-        startDate.setDate(now.getDate() - 7);
-        break;
-      case 'month':
-        startDate.setMonth(now.getMonth() - 1);
-        break;
-      case 'quarter':
-        startDate.setMonth(now.getMonth() - 3);
-        break;
-      case 'year':
-        startDate.setFullYear(now.getFullYear() - 1);
-        break;
-      default:
-        startDate.setMonth(now.getMonth() - 1);
+      case 'today': startDate.setHours(0, 0, 0, 0); break;
+      case 'week': startDate.setDate(now.getDate() - 7); break;
+      case 'month': startDate.setMonth(now.getMonth() - 1); break;
+      case 'quarter': startDate.setMonth(now.getMonth() - 3); break;
+      case 'year': startDate.setFullYear(now.getFullYear() - 1); break;
+      default: startDate.setMonth(now.getMonth() - 1);
     }
 
-    // Get total expenses
     const totalExpenses = await Expense.aggregate([
-      {
-        $match: {
-          restaurantName,
-          date: { $gte: startDate },
-          status: 'paid'
-        }
-      },
-      {
-        $group: {
-          _id: null,
-          total: { $sum: '$amount' }
-        }
-      }
+      { $match: { restaurantName, date: { $gte: startDate }, status: 'paid' } },
+      { $group: { _id: null, total: { $sum: '$amount' } } }
     ]);
 
-    // Get expenses by category
     const expensesByCategory = await Expense.aggregate([
-      {
-        $match: {
-          restaurantName,
-          date: { $gte: startDate },
-          status: 'paid'
-        }
-      },
-      {
-        $group: {
-          _id: '$category',
-          total: { $sum: '$amount' },
-          count: { $sum: 1 }
-        }
-      },
-      {
-        $sort: { total: -1 }
-      }
-    ]);
-
-    // Get monthly trend
-    const monthlyTrend = await Expense.aggregate([
-      {
-        $match: {
-          restaurantName,
-          date: { $gte: new Date(now.getFullYear(), 0, 1) },
-          status: 'paid'
-        }
-      },
-      {
-        $group: {
-          _id: {
-            year: { $year: '$date' },
-            month: { $month: '$date' }
-          },
-          total: { $sum: '$amount' },
-          count: { $sum: 1 }
-        }
-      },
-      {
-        $sort: { '_id.year': 1, '_id.month': 1 }
-      }
+      { $match: { restaurantName, date: { $gte: startDate }, status: 'paid' } },
+      { $group: { _id: '$category', total: { $sum: '$amount' }, count: { $sum: 1 } } },
+      { $sort: { total: -1 } }
     ]);
 
     res.json({
       totalExpenses: totalExpenses[0]?.total || 0,
-      expensesByCategory,
-      monthlyTrend
+      expensesByCategory
     });
   } catch (error) {
-    console.error('Error fetching expense stats:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });
 
-// Get profit and loss data
-router.get('/stats/profit-loss', auth, async (req, res) => {
+// AI Budget Alerts
+router.get('/stats/alerts', auth, async (req, res) => {
   try {
-    const { period = 'month' } = req.query;
     const restaurantName = req.user.restaurantName;
-    
-    // Calculate date range
-    const now = new Date();
-    let startDate = new Date();
-    
-    switch (period) {
-      case 'today':
-        startDate.setHours(0, 0, 0, 0);
-        break;
-      case 'week':
-        startDate.setDate(now.getDate() - 7);
-        break;
-      case 'month':
-        startDate.setMonth(now.getMonth() - 1);
-        break;
-      case 'quarter':
-        startDate.setMonth(now.getMonth() - 3);
-        break;
-      case 'year':
-        startDate.setFullYear(now.getFullYear() - 1);
-        break;
-      default:
-        startDate.setMonth(now.getMonth() - 1);
+    const thirtyDaysAgo = new Date(new Date().setDate(new Date().getDate() - 30));
+
+    const [revenueData, expenseData] = await Promise.all([
+      Order.aggregate([
+        { $match: { restaurantName, createdAt: { $gte: thirtyDaysAgo }, status: 'completed' } },
+        { $group: { _id: null, total: { $sum: '$paidAmount' } } }
+      ]),
+      Expense.aggregate([
+        { $match: { restaurantName, date: { $gte: thirtyDaysAgo }, status: 'paid' } },
+        { $group: { _id: null, total: { $sum: '$amount' } } }
+      ])
+    ]);
+
+    const revenue = revenueData[0]?.total || 0;
+    const expenses = expenseData[0]?.total || 0;
+    const ratio = revenue > 0 ? (expenses / revenue) : 0;
+
+    const alerts = [];
+    if (ratio > 0.5) {
+      alerts.push({ level: 'critical', message: `High overhead: Expenses are ${Math.round(ratio * 100)}% of revenue.`, action: 'Review non-essential spend immediately.' });
+    } else if (ratio > 0.3) {
+      alerts.push({ level: 'warning', message: `Margin squeeze: Expenses reached ${Math.round(ratio * 100)}% of revenue.`, action: 'Monitor ingredient waste and supplier costs.' });
     }
 
-    // Get total revenue from orders (use paidAmount instead of totalAmount for accurate revenue)
-    const revenueData = await Order.aggregate([
-      {
-        $match: {
-          restaurantName,
-          createdAt: { $gte: startDate },
-          status: 'completed'
-        }
-      },
-      {
-        $group: {
-          _id: null,
-          totalRevenue: { $sum: '$paidAmount' },  // Use paidAmount instead of totalAmount
-          totalDueAmount: { $sum: '$dueAmount' },  // Track due amounts separately
-          orderCount: { $sum: 1 }
-        }
-      }
+    const categoryTrend = await Expense.aggregate([
+      { $match: { restaurantName, date: { $gte: thirtyDaysAgo }, status: 'paid' } },
+      { $group: { _id: '$category', total: { $sum: '$amount' } } },
+      { $sort: { total: -1 } }
     ]);
 
-    // Get total expenses
-    const expenseData = await Expense.aggregate([
-      {
-        $match: {
-          restaurantName,
-          date: { $gte: startDate },
-          status: 'paid'
-        }
-      },
-      {
-        $group: {
-          _id: null,
-          totalExpenses: { $sum: '$amount' },
-          expenseCount: { $sum: 1 }
-        }
-      }
-    ]);
+    if (categoryTrend.length > 0 && categoryTrend[0].total > (expenses * 0.4)) {
+      alerts.push({ level: 'info', message: `Category focus: "${categoryTrend[0]._id}" accounts for ${Math.round((categoryTrend[0].total / expenses) * 100)}% of spend.`, action: 'Audit spikes in this category.' });
+    }
 
-    const totalRevenue = revenueData[0]?.totalRevenue || 0;
-    const totalDueAmount = revenueData[0]?.totalDueAmount || 0;
-    const totalExpenses = expenseData[0]?.totalExpenses || 0;
-    const netProfit = totalRevenue - totalExpenses;
-
-    res.json({
-      totalRevenue,
-      totalDueAmount,  // Include due amounts in response
-      totalExpenses,
-      netProfit,
-      orderCount: revenueData[0]?.orderCount || 0,
-      expenseCount: expenseData[0]?.expenseCount || 0,
-      profitMargin: totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0
-    });
+    res.json(alerts);
   } catch (error) {
-    console.error('Error fetching P&L data:', error);
     res.status(500).json({ message: 'Server error' });
   }
+});
+
+// Standard CRUD (Simplified)
+router.post('/', auth, async (req, res) => {
+  try {
+    const expense = new Expense({ ...req.body, userId: req.user.id, restaurantName: req.user.restaurantName });
+    await expense.save();
+    
+    // Emit real-time notification
+    const io = req.app.get('socketio');
+    if (io) {
+      io.to(req.user.restaurantName).emit('new_expense', expense);
+    }
+
+    res.status(201).json(expense);
+  } catch (error) { res.status(500).json({ message: 'Server error' }); }
+});
+
+router.put('/:id', auth, async (req, res) => {
+  try {
+    const expense = await Expense.findOneAndUpdate({ _id: req.params.id, restaurantName: req.user.restaurantName }, req.body, { new: true });
+    if (!expense) return res.status(404).json({ message: 'Not found' });
+    res.json(expense);
+  } catch (error) { res.status(500).json({ message: 'Server error' }); }
+});
+
+router.delete('/:id', auth, async (req, res) => {
+  try {
+    const expense = await Expense.findOneAndDelete({ _id: req.params.id, restaurantName: req.user.restaurantName });
+    if (!expense) return res.status(404).json({ message: 'Not found' });
+    res.json({ message: 'Deleted' });
+  } catch (error) { res.status(500).json({ message: 'Server error' }); }
 });
 
 module.exports = router;

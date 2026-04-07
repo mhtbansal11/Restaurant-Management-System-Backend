@@ -14,6 +14,10 @@ const orderItemSchema = new mongoose.Schema({
     type: Number,
     required: true
   },
+  variant: {
+    name: String, // e.g., 'Small'
+    price: Number
+  },
   notes: {
     type: String,
     default: ''
@@ -45,13 +49,13 @@ const orderSchema = new mongoose.Schema({
     enum: ['dine-in', 'takeaway', 'packing', null],
     default: null
   },
-  tableId: {
-    type: String, // Can be null for takeaway/delivery
-    default: null
+  tableIds: {
+    type: [String], // Array for merged tables
+    default: []
   },
-  tableLabel: {
-    type: String,
-    default: null
+  tableLabels: {
+    type: [String], // Array for merged labels
+    default: []
   },
   items: [orderItemSchema],
   totalAmount: {

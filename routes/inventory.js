@@ -38,6 +38,16 @@ router.post('/', [auth, checkRole(['superadmin', 'owner', 'manager'])], async (r
       restaurantName: req.user.restaurantName
     });
     await item.save();
+
+    // Emit real-time notification
+    const io = req.app.get('socketio');
+    if (io) {
+      io.to(req.user.restaurantName).emit('inventory_update', item);
+      if (item.quantity <= item.minThreshold) {
+        io.to(req.user.restaurantName).emit('low_stock', item);
+      }
+    }
+
     res.status(201).json(item);
   } catch (error) {
     res.status(400).json({ message: error.message });
@@ -53,6 +63,16 @@ router.put('/:id', [auth, checkRole(['superadmin', 'owner', 'manager', 'kitchen_
       { new: true }
     );
     if (!item) return res.status(404).json({ message: 'Item not found' });
+
+    // Emit real-time notification
+    const io = req.app.get('socketio');
+    if (io) {
+      io.to(req.user.restaurantName).emit('inventory_update', item);
+      if (item.quantity <= item.minThreshold) {
+        io.to(req.user.restaurantName).emit('low_stock', item);
+      }
+    }
+
     res.json(item);
   } catch (error) {
     res.status(400).json({ message: error.message });

@@ -34,6 +34,35 @@ const menuItemSchema = new mongoose.Schema({
     type: Boolean,
     default: true
   },
+  hasVariants: {
+    type: Boolean,
+    default: false
+  },
+  variants: [{
+    name: {
+      type: String, // e.g., 'Small', 'Medium', 'Large'
+      required: true
+    },
+    price: {
+      type: Number,
+      required: true
+    },
+    isAvailable: {
+      type: Boolean,
+      default: true
+    },
+    ingredients: [{
+      inventoryItemId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'InventoryItem'
+      },
+      quantity: {
+        type: Number,
+        required: true
+      },
+      unit: String
+    }]
+  }],
   aiGenerated: {
     type: Boolean,
     default: false

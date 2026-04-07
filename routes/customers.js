@@ -4,7 +4,7 @@ const Customer = require('../models/Customer');
 const Order = require('../models/Order');
 const auth = require('../middleware/auth');
 
-// Get all customers with search
+// Get all customers with search and CLV (Customer Lifetime Value)
 router.get('/', auth, async (req, res) => {
   try {
     const { search } = req.query;
@@ -18,7 +18,30 @@ router.get('/', auth, async (req, res) => {
     }
 
     const customers = await Customer.find(query).sort({ name: 1 });
-    res.json(customers);
+    
+    // Enrich with CLV (Customer Lifetime Value)
+    const customerEnriched = await Promise.all(customers.map(async (c) => {
+      const orders = await Order.find({ 
+        restaurantName: req.user.restaurantName,
+        $or: [
+          { customer: c._id },
+          { customerPhone: c.phone }
+        ],
+        status: { $ne: 'cancelled' }
+      }).select('totalAmount');
+      
+      const totalSpent = orders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+      const orderCount = orders.length;
+      
+      const obj = c.toObject();
+      obj.clv = totalSpent;
+      obj.orderCount = orderCount;
+      obj.averageOrderValue = orderCount > 0 ? (totalSpent / orderCount) : 0;
+      
+      return obj;
+    }));
+
+    res.json(customerEnriched);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

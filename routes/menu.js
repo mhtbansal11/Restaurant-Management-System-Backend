@@ -126,17 +126,37 @@ router.post('/ai-extract', [auth, checkRole(['superadmin', 'owner', 'manager'])]
 // Create menu item manually
 router.post('/', [auth, checkRole(['superadmin', 'owner', 'manager'])], async (req, res) => {
   try {
-    const { name, description, price, category, image, isAvailable } = req.body;
+    const { name, description, price, category, image, isAvailable, variants, ingredients } = req.body;
+    let { hasVariants } = req.body;
+
+    // Auto-detect hasVariants if variants are provided
+    if (variants && variants.length > 0) {
+      hasVariants = true;
+    }
+
+    let finalPrice = price;
+    if (hasVariants && variants && variants.length > 0) {
+      // Automatically use the first variant's price if variants exist
+      finalPrice = variants[0].price;
+    }
+
+    // Ensure price is a valid number and not an empty string
+    if (finalPrice === '' || finalPrice === null || finalPrice === undefined) {
+      finalPrice = 0;
+    }
 
     const menuItem = new MenuItem({
       userId: req.user._id,
       restaurantName: req.user.restaurantName,
       name,
       description,
-      price,
+      price: finalPrice,
       category,
       image: image || '',
-      isAvailable: isAvailable !== undefined ? isAvailable : true
+      isAvailable: isAvailable !== undefined ? isAvailable : true,
+      hasVariants: hasVariants || false,
+      variants: variants || [],
+      ingredients: ingredients || []
     });
 
     await menuItem.save();
@@ -154,7 +174,24 @@ router.put('/:id', [auth, checkRole(['superadmin', 'owner', 'manager', 'kitchen_
       return res.status(404).json({ message: 'Menu item not found' });
     }
 
-    Object.assign(menuItem, req.body);
+    const updateData = { ...req.body };
+    
+    // Auto-detect hasVariants if variants are provided
+    if (updateData.variants && updateData.variants.length > 0) {
+      updateData.hasVariants = true;
+    }
+
+    // If variants are being updated, ensure the main price is synced with the first variant
+    if (updateData.hasVariants && updateData.variants && updateData.variants.length > 0) {
+      updateData.price = updateData.variants[0].price;
+    } else if (updateData.price === '' || updateData.price === null || updateData.price === undefined) {
+      // If price is missing or an empty string, set it to 0 or use current value
+      if (updateData.price === '') {
+        updateData.price = 0;
+      }
+    }
+
+    Object.assign(menuItem, updateData);
     await menuItem.save();
     res.json(menuItem);
   } catch (error) {

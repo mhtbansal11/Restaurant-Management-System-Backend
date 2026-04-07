@@ -1,9 +1,13 @@
-
+const OpenAI = require('openai');
 const Order = require('../../models/Order');
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY || 'dummy_key',
+});
 
 /**
  * AI Operational Intelligence Service
- * Analyzes peak hours, popular items, and service performance
+ * Analyzed peak hours, popular items, and service performance
  */
 async function getOperationalInsights(userId) {
   try {
@@ -21,7 +25,8 @@ async function getOperationalInsights(userId) {
         message: 'Insufficient data for operational insights.',
         peakHours: [],
         popularItems: [],
-        busiestDays: []
+        busiestDays: [],
+        summary: "I'm still learning your restaurant's patterns. Start taking orders to see AI insights!"
       };
     }
 
@@ -63,19 +68,30 @@ async function getOperationalInsights(userId) {
       .map(([day, count]) => ({ day, count }))
       .sort((a, b) => b.count - a.count);
 
-    // 4. Generate AI Summary (Rule-based for now, could use OpenAI)
-    const topDay = busiestDays[0]?.day;
-    const topHourRaw = peakHours[0]?.hour;
-    const topItem = popularItems[0]?.name;
+    // 4. Generate AI Summary using OpenAI
+    let summary = '';
+    try {
+      const prompt = `As an AI Restaurant Consultant, analyze this data from the last 30 days:
+      - Busiest Days: ${busiestDays.map(d => `${d.day} (${d.count} orders)`).join(', ')}
+      - Peak Hours: ${peakHours.map(h => `${h.hour}:00 (${h.count} orders)`).join(', ')}
+      - Top Items: ${popularItems.map(i => `${i.name} (${i.count} sold)`).join(', ')}
+      
+      Provide a concise 2-3 sentence strategic briefing for the owner. Focus on staffing, inventory, and growth.`;
 
-    const formatHour = (hour) => {
-      const h = hour % 12 || 12;
-      const ampm = hour >= 12 ? 'PM' : 'AM';
-      return `${h} ${ampm}`;
-    };
-    const topHourFormatted = topHourRaw !== undefined ? formatHour(topHourRaw) : 'N/A';
-
-    const summary = `Your busiest day is ${topDay}, with peak activity around ${topHourFormatted}. ${topItem} is your most popular item. Consider increasing staff on ${topDay}s and ensuring high stock for ${topItem}.`;
+      const response = await openai.chat.completions.create({
+        model: "gpt-3.5-turbo",
+        messages: [{ role: "user", content: prompt }],
+        max_tokens: 150
+      });
+      summary = response.choices[0].message.content.trim();
+    } catch (aiErr) {
+      console.error('OpenAI Error:', aiErr);
+      // Fallback to rule-based
+      const topDay = busiestDays[0]?.day;
+      const topHour = peakHours[0]?.hour;
+      const topItem = popularItems[0]?.name;
+      summary = `Your busiest day is ${topDay} at ${topHour}:00. ${topItem} is trending. Keep up the great work!`;
+    }
 
     return {
       peakHours,

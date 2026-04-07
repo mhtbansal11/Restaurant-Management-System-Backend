@@ -513,6 +513,10 @@ router.patch('/reject-aadhar/:userId', [auth, checkRole(['superadmin', 'owner', 
 // Get user notifications
 router.get('/notifications', auth, async (req, res) => {
   try {
+    if (!req.user || !req.user.restaurantName) {
+      return res.status(400).json({ message: 'Restaurant context missing from user profile' });
+    }
+
     const notifications = await Notification.find({
       userId: req.user._id,
       restaurantName: req.user.restaurantName
@@ -520,7 +524,8 @@ router.get('/notifications', auth, async (req, res) => {
     
     res.json(notifications);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error('FETCH_NOTIFICATIONS_ERROR:', error);
+    res.status(500).json({ message: 'Internal Server Error' });
   }
 });
 

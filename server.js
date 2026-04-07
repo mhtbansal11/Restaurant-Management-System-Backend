@@ -75,8 +75,32 @@ mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/restauran
 .catch(err => console.log('MongoDB Connection Error:', err));
 
 const PORT = process.env.PORT || 5000;
+const server = require('http').createServer(app);
+const io = require('socket.io')(server, {
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST"]
+  }
+});
 
-app.listen(PORT, () => {
+// Socket.io connection logic
+io.on('connection', (socket) => {
+  console.log('New client connected:', socket.id);
+  
+  socket.on('join', (restaurantName) => {
+    socket.join(restaurantName);
+    console.log(`Client joined restaurant room: ${restaurantName}`);
+  });
+
+  socket.on('disconnect', () => {
+    console.log('Client disconnected');
+  });
+});
+
+// Make io accessible to routes
+app.set('socketio', io);
+
+server.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running on port ${PORT}`);
 });
 

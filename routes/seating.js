@@ -1,6 +1,7 @@
 const express = require('express');
 const SeatingLayout = require('../models/SeatingLayout');
 const Table = require('../models/Table');
+const Order = require('../models/Order');
 const auth = require('../middleware/auth');
 const router = express.Router();
 
@@ -112,19 +113,64 @@ router.get('/tables', auth, async (req, res) => {
 // Update table status
 router.put('/tables/:tableId', auth, async (req, res) => {
   try {
-    const { status, customerCount, currentOrder } = req.body;
+    const { status, customerCount, currentOrder, forceClear } = req.body;
 
-    const table = await Table.findOneAndUpdate(
-      { restaurantName: req.user.restaurantName, tableId: req.params.tableId },
-      { status, customerCount, currentOrder },
-      { new: true }
-    );
+    const table = await Table.findOne({ 
+      restaurantName: req.user.restaurantName, 
+      tableId: req.params.tableId 
+    }).populate('currentOrder');
 
     if (!table) {
       return res.status(404).json({ message: 'Table not found' });
     }
 
-    res.json(table);
+    // Validation: Prevent clearing table if there's an active order that's not completed or paid
+    if (status === 'available' && table.currentOrder && !forceClear) {
+      const order = table.currentOrder;
+      const isCompleted = order.status === 'completed' || order.status === 'cancelled';
+      const isPaid = order.paymentStatus === 'paid';
+
+      if (!isCompleted || !isPaid) {
+        let reason = '';
+        if (!isCompleted && !isPaid) reason = 'order is not completed and payment is still pending';
+        else if (!isCompleted) reason = 'order is not completed';
+        else if (!isPaid) reason = 'payment is still pending';
+
+        return res.status(400).json({ 
+          message: `Cannot clear table because the ${reason}.`,
+          orderStatus: order.status,
+          paymentStatus: order.paymentStatus
+        });
+      }
+    }
+
+    // Prepare update object
+    const updateData = { status };
+    
+    if (customerCount !== undefined) updateData.customerCount = customerCount;
+    
+    // Explicitly handle currentOrder
+     // If setting to available, we should probably clear currentOrder unless specified otherwise
+     if (status === 'available') {
+       // If we're force clearing, we might want to detach the order from this table
+       if (forceClear && table.currentOrder) {
+         await Order.findByIdAndUpdate(table.currentOrder._id, {
+           $set: { tableId: null, tableLabel: null }
+         });
+       }
+       updateData.currentOrder = null;
+       updateData.customerCount = 0;
+     } else if (currentOrder !== undefined) {
+       updateData.currentOrder = currentOrder;
+     }
+
+    const updatedTable = await Table.findOneAndUpdate(
+      { restaurantName: req.user.restaurantName, tableId: req.params.tableId },
+      updateData,
+      { new: true }
+    ).populate('currentOrder');
+
+    res.json(updatedTable);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
