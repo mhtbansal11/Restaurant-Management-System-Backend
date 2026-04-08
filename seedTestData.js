@@ -8,6 +8,8 @@ const Expense = require('./models/Expense');
 const ExpenseReminder = require('./models/ExpenseReminder');
 const Order = require('./models/Order');
 const Customer = require('./models/Customer');
+const Table = require('./models/Table');
+const SeatingLayout = require('./models/SeatingLayout');
 
 const commonPassword = '12345678';
 const targetRestaurantName = 'ATC';
@@ -87,6 +89,37 @@ const testCustomers = [
   { name: 'New Customer', phone: '9876543212', email: 'new@customer.com', address: '789 New Avenue' }
 ];
 
+const seatingFloors = [
+  {
+    id: 'floor-1',
+    name: 'Ground Floor',
+    canvasWidth: 1200,
+    canvasHeight: 800,
+    tables: [
+      { id: 'T01', label: 'Window 1', x: 80, y: 90, width: 110, height: 70, capacity: 2, shape: 'rectangle', rotation: 0 },
+      { id: 'T02', label: 'Window 2', x: 240, y: 90, width: 110, height: 70, capacity: 2, shape: 'rectangle', rotation: 0 },
+      { id: 'T03', label: 'Center 1', x: 440, y: 120, width: 120, height: 120, capacity: 4, shape: 'circle', rotation: 0 },
+      { id: 'T04', label: 'Center 2', x: 650, y: 120, width: 120, height: 120, capacity: 4, shape: 'circle', rotation: 0 },
+      { id: 'T05', label: 'Family 1', x: 150, y: 310, width: 160, height: 80, capacity: 6, shape: 'rectangle', rotation: 0 },
+      { id: 'T06', label: 'Family 2', x: 400, y: 320, width: 160, height: 80, capacity: 6, shape: 'rectangle', rotation: 0 }
+    ]
+  },
+  {
+    id: 'floor-2',
+    name: 'Rooftop',
+    canvasWidth: 1200,
+    canvasHeight: 800,
+    tables: [
+      { id: 'T07', label: 'Sky 1', x: 120, y: 110, width: 110, height: 110, capacity: 4, shape: 'circle', rotation: 0 },
+      { id: 'T08', label: 'Sky 2', x: 300, y: 110, width: 110, height: 110, capacity: 4, shape: 'circle', rotation: 0 },
+      { id: 'T09', label: 'Corner 1', x: 520, y: 90, width: 120, height: 70, capacity: 2, shape: 'rectangle', rotation: 0 },
+      { id: 'T10', label: 'Corner 2', x: 700, y: 90, width: 120, height: 70, capacity: 2, shape: 'rectangle', rotation: 0 },
+      { id: 'T11', label: 'Lounge 1', x: 180, y: 340, width: 170, height: 90, capacity: 8, shape: 'rectangle', rotation: 0 },
+      { id: 'T12', label: 'Lounge 2', x: 470, y: 340, width: 170, height: 90, capacity: 8, shape: 'rectangle', rotation: 0 }
+    ]
+  }
+];
+
 const seedTestData = async () => {
   try {
     await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/restaurant-db');
@@ -102,6 +135,8 @@ const seedTestData = async () => {
     await ExpenseReminder.deleteMany({});
     await Order.deleteMany({});
     await Customer.deleteMany({});
+    await Table.deleteMany({});
+    await SeatingLayout.deleteMany({});
     
     console.log('All existing data cleared');
     
@@ -195,6 +230,26 @@ const seedTestData = async () => {
       });
       createdCustomers.push(cust);
       console.log(`Created customer: ${customer.name}`);
+    }
+
+    await SeatingLayout.create({
+      userId: owner._id,
+      restaurantName: targetRestaurantName,
+      floors: seatingFloors
+    });
+    console.log(`Created seating layout with ${seatingFloors.length} floors`);
+
+    const flattenedTables = seatingFloors.flatMap(floor => floor.tables);
+    for (const table of flattenedTables) {
+      await Table.create({
+        userId: owner._id,
+        restaurantName: targetRestaurantName,
+        tableId: table.id,
+        capacity: table.capacity,
+        status: 'available',
+        customerCount: 0
+      });
+      console.log(`Created table: ${table.id} (${table.label})`);
     }
     
     // Create test orders with payment data
@@ -304,6 +359,8 @@ const seedTestData = async () => {
     console.log(`   - ${monthlyExpenses.length} monthly expenses created`);
     console.log(`   - ${expenseReminders.length} expense reminders created`);
     console.log(`   - ${testCustomers.length} customers created`);
+    console.log(`   - ${seatingFloors.length} floors created`);
+    console.log(`   - ${seatingFloors.flatMap(floor => floor.tables).length} tables created`);
     console.log(`   - ${orders.length} orders with payment data created`);
     console.log('\n🔑 Login credentials:');
     console.log(`   Owner: ${ownerEmail} / ${commonPassword}`);

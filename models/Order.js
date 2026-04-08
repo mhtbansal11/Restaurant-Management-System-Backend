@@ -26,6 +26,10 @@ const orderItemSchema = new mongoose.Schema({
     type: String,
     enum: ['queued', 'preparing', 'ready', 'served', 'cancelled'],
     default: 'queued'
+  },
+  kotPrintedQuantity: {
+    type: Number,
+    default: 0
   }
 });
 

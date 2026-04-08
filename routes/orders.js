@@ -178,7 +178,13 @@ router.post('/', [auth, checkRole(['superadmin', 'owner', 'manager', 'cashier', 
         { 
           status: 'occupied',
           currentOrder: order._id,
-          customerCount: req.body.customerCount || 0
+          customerCount: req.body.customerCount || 0,
+          reservation: {
+            reservedFor: null,
+            guestName: '',
+            guestPhone: '',
+            notes: ''
+          }
         }
       );
     }
@@ -256,7 +262,13 @@ router.put('/:id/status', [auth, checkRole(['superadmin', 'owner', 'manager', 'c
           { 
             status: 'available',
             currentOrder: null,
-            customerCount: 0
+            customerCount: 0,
+            reservation: {
+              reservedFor: null,
+              guestName: '',
+              guestPhone: '',
+              notes: ''
+            }
           }
         );
       }
@@ -294,9 +306,9 @@ router.put('/:id/status', [auth, checkRole(['superadmin', 'owner', 'manager', 'c
     const populatedOrder = await Order.findById(order._id).populate('items.menuItem');
 
     // Emit real-time update
-    const io = req.app.get('socketio');
-    if (io) {
-      io.to(req.user.restaurantName).emit('order_updated', populatedOrder);
+    const statusUpdateSocket = req.app.get('socketio');
+    if (statusUpdateSocket) {
+      statusUpdateSocket.to(req.user.restaurantName).emit('order_updated', populatedOrder);
     }
 
     res.json(populatedOrder);
@@ -358,9 +370,37 @@ router.put('/:id', [auth, checkRole(['superadmin', 'owner', 'manager', 'cashier'
         console.error('Inventory delta error:', err);
       }
 
-      // Rest of the item update logic...
-      // [Simplified for briefness but preserving logic]
-      order.items = req.body.items;
+      const getItemSignature = (item) => {
+        const menuItemId = item?.menuItem?._id?.toString?.() || item?.menuItem?.toString?.() || '';
+        const variantName = item?.variant?.name || '';
+        const notes = item?.notes || '';
+        const price = Number(item?.price || 0);
+        return `${menuItemId}__${variantName}__${notes}__${price}`;
+      };
+
+      const existingItemsById = new Map(
+        order.items.map(item => [item._id.toString(), item])
+      );
+      const existingItemsBySignature = new Map(
+        order.items.map(item => [getItemSignature(item), item])
+      );
+
+      order.items = req.body.items.map((item) => {
+        const existingItemById = item._id
+          ? existingItemsById.get(item._id.toString())
+          : null;
+        const existingItem = existingItemById || existingItemsBySignature.get(getItemSignature(item));
+        const nextQuantity = Number(item.quantity || 0);
+        const previousPrintedQuantity = Number(existingItem?.kotPrintedQuantity || 0);
+
+        return {
+          ...item,
+          _id: existingItem?._id || item._id,
+          kotPrintedQuantity: existingItem
+            ? Math.min(previousPrintedQuantity, nextQuantity)
+            : 0
+        };
+      });
       
       if (req.body.subtotal !== undefined) order.subtotal = req.body.subtotal;
       if (req.body.discountPercent !== undefined) order.discountPercent = req.body.discountPercent;
@@ -403,7 +443,17 @@ router.put('/:id', [auth, checkRole(['superadmin', 'owner', 'manager', 'cashier'
       // Free old tables
       await Table.updateMany(
         { restaurantName: req.user.restaurantName, tableId: { $in: oldTableIds } },
-        { status: 'available', currentOrder: null, customerCount: 0 }
+        {
+          status: 'available',
+          currentOrder: null,
+          customerCount: 0,
+          reservation: {
+            reservedFor: null,
+            guestName: '',
+            guestPhone: '',
+            notes: ''
+          }
+        }
       );
     }
 
@@ -422,9 +472,40 @@ router.put('/:id', [auth, checkRole(['superadmin', 'owner', 'manager', 'cashier'
 
       await Table.updateMany(
         { restaurantName: req.user.restaurantName, tableId: { $in: newTableIds } },
-        { status: 'occupied', currentOrder: order._id, customerCount: req.body.customerCount || 0 }
+        {
+          status: 'occupied',
+          currentOrder: order._id,
+          customerCount: req.body.customerCount || 0,
+          reservation: {
+            reservedFor: null,
+            guestName: '',
+            guestPhone: '',
+            notes: ''
+          }
+        }
       );
     }
+
+    await order.save();
+    const populatedOrder = await Order.findById(order._id).populate('items.menuItem');
+    res.json(populatedOrder);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+router.patch('/:id/kot/printed', [auth, checkRole(['superadmin', 'owner', 'manager', 'cashier', 'receptionist', 'waiter'])], async (req, res) => {
+  try {
+    const order = await Order.findOne({ _id: req.params.id, restaurantName: req.user.restaurantName });
+
+    if (!order) {
+      return res.status(404).json({ message: 'Order not found' });
+    }
+
+    order.items.forEach((item) => {
+      if (item.status === 'cancelled') return;
+      item.kotPrintedQuantity = item.quantity;
+    });
 
     await order.save();
     const populatedOrder = await Order.findById(order._id).populate('items.menuItem');
@@ -449,7 +530,13 @@ router.delete('/:id', [auth, checkRole(['superadmin', 'owner', 'manager'])], asy
       { 
         status: 'available',
         currentOrder: null,
-        customerCount: 0
+        customerCount: 0,
+        reservation: {
+          reservedFor: null,
+          guestName: '',
+          guestPhone: '',
+          notes: ''
+        }
       }
     );
 
@@ -595,7 +682,13 @@ router.put('/:id/pay', [auth, checkRole(['superadmin', 'owner', 'manager', 'cash
         { 
           status: 'available',
           currentOrder: null,
-          customerCount: 0
+          customerCount: 0,
+          reservation: {
+            reservedFor: null,
+            guestName: '',
+            guestPhone: '',
+            notes: ''
+          }
         }
       );
     }

@@ -1,5 +1,27 @@
 const mongoose = require('mongoose');
 
+const reservationSchema = new mongoose.Schema({
+  reservedFor: {
+    type: Date,
+    default: null
+  },
+  guestName: {
+    type: String,
+    trim: true,
+    default: ''
+  },
+  guestPhone: {
+    type: String,
+    trim: true,
+    default: ''
+  },
+  notes: {
+    type: String,
+    trim: true,
+    default: ''
+  }
+}, { _id: false });
+
 const tableSchema = new mongoose.Schema({
   userId: {
     type: mongoose.Schema.Types.ObjectId,
@@ -31,6 +53,10 @@ const tableSchema = new mongoose.Schema({
   capacity: {
     type: Number,
     required: true
+  },
+  reservation: {
+    type: reservationSchema,
+    default: () => ({})
   }
 }, {
   timestamps: true

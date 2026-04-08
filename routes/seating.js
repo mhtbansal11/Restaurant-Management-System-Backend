@@ -113,7 +113,7 @@ router.get('/tables', auth, async (req, res) => {
 // Update table status
 router.put('/tables/:tableId', auth, async (req, res) => {
   try {
-    const { status, customerCount, currentOrder, forceClear } = req.body;
+    const { status, customerCount, currentOrder, forceClear, reservation } = req.body;
 
     const table = await Table.findOne({ 
       restaurantName: req.user.restaurantName, 
@@ -144,6 +144,23 @@ router.put('/tables/:tableId', auth, async (req, res) => {
       }
     }
 
+    if (status === 'reserved') {
+      if (table.currentOrder) {
+        return res.status(400).json({ message: 'Cannot reserve a table with an active order' });
+      }
+
+      if (reservation?.reservedFor) {
+        const reservedForDate = new Date(reservation.reservedFor);
+        if (Number.isNaN(reservedForDate.getTime())) {
+          return res.status(400).json({ message: 'Reservation date/time is invalid' });
+        }
+
+        if (reservedForDate.getTime() < Date.now()) {
+          return res.status(400).json({ message: 'Reservation date/time must be in the future' });
+        }
+      }
+    }
+
     // Prepare update object
     const updateData = { status };
     
@@ -160,8 +177,31 @@ router.put('/tables/:tableId', auth, async (req, res) => {
        }
        updateData.currentOrder = null;
        updateData.customerCount = 0;
+       updateData.reservation = {
+         reservedFor: null,
+         guestName: '',
+         guestPhone: '',
+         notes: ''
+       };
+     } else if (status === 'reserved') {
+       updateData.currentOrder = null;
+       updateData.customerCount = 0;
+       updateData.reservation = {
+         reservedFor: reservation?.reservedFor ? new Date(reservation.reservedFor) : null,
+         guestName: reservation?.guestName || '',
+         guestPhone: reservation?.guestPhone || '',
+         notes: reservation?.notes || ''
+       };
      } else if (currentOrder !== undefined) {
        updateData.currentOrder = currentOrder;
+       if (status === 'occupied') {
+         updateData.reservation = {
+           reservedFor: null,
+           guestName: '',
+           guestPhone: '',
+           notes: ''
+         };
+       }
      }
 
     const updatedTable = await Table.findOneAndUpdate(

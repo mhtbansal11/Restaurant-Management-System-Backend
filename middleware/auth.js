@@ -1,8 +1,13 @@
 const jwt = require('jsonwebtoken');
+const mongoose = require('mongoose');
 const User = require('../models/User');
 
 const auth = async (req, res, next) => {
   try {
+    if (mongoose.connection.readyState !== 1) {
+      return res.status(503).json({ message: 'Database unavailable. Please start MongoDB and try again.' });
+    }
+
     const token = req.header('Authorization')?.replace('Bearer ', '');
     
     if (!token) {

@@ -1,5 +1,6 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
+const mongoose = require('mongoose');
 const User = require('../models/User');
 const auth = require('../middleware/auth');
 const router = express.Router();
@@ -9,11 +10,24 @@ if (!process.env.JWT_SECRET) {
   console.error('ERROR: JWT_SECRET is not set in environment variables!');
 }
 
+function ensureDatabaseConnected(res) {
+  if (mongoose.connection.readyState !== 1) {
+    res.status(503).json({ message: 'Database unavailable. Please start MongoDB and try again.' });
+    return false;
+  }
+
+  return true;
+}
+
 // Register
 router.post('/register', async (req, res) => {
   try {
     if (!process.env.JWT_SECRET) {
       return res.status(500).json({ message: 'Server configuration error: JWT_SECRET is not set' });
+    }
+
+    if (!ensureDatabaseConnected(res)) {
+      return;
     }
 
     const { name, email, password, restaurantName } = req.body;
@@ -49,6 +63,10 @@ router.post('/login', async (req, res) => {
   try {
     if (!process.env.JWT_SECRET) {
       return res.status(500).json({ message: 'Server configuration error: JWT_SECRET is not set' });
+    }
+
+    if (!ensureDatabaseConnected(res)) {
+      return;
     }
 
     const { email, password } = req.body;
