@@ -47,6 +47,32 @@ router.post('/layout', auth, async (req, res) => {
     const { floors } = req.body; // Expecting { floors: [...] }
 
     let layout = await SeatingLayout.findOne({ restaurantName: req.user.restaurantName });
+    const existingFloors = layout?.floors || [];
+    const existingTables = existingFloors.flatMap((floor) => floor.tables || []);
+    const nextFloors = floors || [];
+    const nextTables = nextFloors.flatMap((floor) => floor.tables || []);
+    const nextTableIdSet = new Set(nextTables.map((table) => table.id));
+
+    const removedTables = existingTables.filter((table) => !nextTableIdSet.has(table.id));
+
+    for (const removedTable of removedTables) {
+      if (!removedTable?.isTemporary) {
+        return res.status(400).json({
+          message: `Table ${removedTable.label || removedTable.id} cannot be removed because it is not temporary.`
+        });
+      }
+
+      const tableStatusDoc = await Table.findOne({
+        restaurantName: req.user.restaurantName,
+        tableId: removedTable.id
+      });
+
+      if (tableStatusDoc && tableStatusDoc.status !== 'available') {
+        return res.status(400).json({
+          message: `Temporary table ${removedTable.label || removedTable.id} can be removed only when available.`
+        });
+      }
+    }
 
     if (layout) {
       layout.floors = floors;
@@ -85,13 +111,24 @@ router.post('/layout', auth, async (req, res) => {
                 userId: req.user._id,
                 restaurantName: req.user.restaurantName,
                 tableId: table.id,
-                capacity: table.capacity 
+                capacity: table.capacity,
+                isTemporary: Boolean(table.isTemporary)
             },
             $setOnInsert: { status: 'available' }
           },
           { upsert: true, new: true }
         );
       }
+    }
+
+    const activeTableIds = allTables.map((table) => table.id);
+    if (activeTableIds.length > 0) {
+      await Table.deleteMany({
+        restaurantName: req.user.restaurantName,
+        tableId: { $nin: activeTableIds }
+      });
+    } else {
+      await Table.deleteMany({ restaurantName: req.user.restaurantName });
     }
 
     res.json(layout);

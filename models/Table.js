@@ -54,6 +54,10 @@ const tableSchema = new mongoose.Schema({
     type: Number,
     required: true
   },
+  isTemporary: {
+    type: Boolean,
+    default: false
+  },
   reservation: {
     type: reservationSchema,
     default: () => ({})

@@ -8,6 +8,10 @@ const tableSchema = new mongoose.Schema({
   height: Number,
   capacity: Number,
   label: String,
+  isTemporary: {
+    type: Boolean,
+    default: false
+  },
   shape: {
     type: String,
     enum: ['rectangle', 'circle', 'square'],
