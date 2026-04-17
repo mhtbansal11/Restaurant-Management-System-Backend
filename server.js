@@ -19,34 +19,43 @@ console.log('✅ Environment variables loaded successfully');
 const app = express();
 
 // Middleware
-const allowedOrigins = [
+const defaultAllowedOrigins = [
   'http://localhost:5173',
   'http://localhost:3000',
   'http://localhost:5000',
   'https://adaptable-white-hen.103-102-234-3.cpanel.site'
 ];
 
-app.use(cors({
-  // origin: function (origin, callback) {
-  //   // Allow requests with no origin (like mobile apps or curl requests)
-  //   if (!origin) return callback(null, true);
-    
-  //   if (allowedOrigins.indexOf(origin) !== -1 || !origin) {
-  //     callback(null, true);
-  //   } else {
-  //     console.log('Blocked by CORS:', origin);
-  //     callback(new Error('Not allowed by CORS'));
-  //   }
-  // },
-    origin: true,
+const envAllowedOrigins = (process.env.CORS_ORIGINS || '')
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
+const allowedOrigins = envAllowedOrigins.length > 0 ? envAllowedOrigins : defaultAllowedOrigins;
+
+const corsOptions = {
+  origin: function (origin, callback) {
+    // Allow non-browser clients (no Origin header) and approved web origins.
+    const isCpanelSubdomain = !!origin && /^https:\/\/[a-z0-9-]+\.103-102-234-3\.cpanel\.site$/i.test(origin);
+    if (!origin || allowedOrigins.includes(origin) || isCpanelSubdomain) {
+      return callback(null, true);
+    }
+
+    console.log('Blocked by CORS:', origin);
+    console.log('Allowed origins:', allowedOrigins);
+    return callback(new Error('Not allowed by CORS'));
+  },
   credentials: true,
-  // methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  // allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin']
-}));
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+  optionsSuccessStatus: 204
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-app.options('*', cors());
+app.options('*', cors(corsOptions));
 
 // Serve uploaded files
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
