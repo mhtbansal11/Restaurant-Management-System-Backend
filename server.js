@@ -32,7 +32,7 @@ const envAllowedOrigins = (process.env.REACT_APP_CORS_ORIGINS || '')
   .map((origin) => origin.trim())
   .filter(Boolean);
 
-const allowedOrigins = envAllowedOrigins.length > 0 ? envAllowedOrigins : defaultAllowedOrigins;
+const allowedOrigins = [...new Set([...defaultAllowedOrigins, ...envAllowedOrigins])];
 
 const corsOptions = {
   origin: function (origin, callback) {
@@ -52,11 +52,10 @@ const corsOptions = {
   optionsSuccessStatus: 204
 };
 
+app.options('*', cors(corsOptions));
 app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
-app.options('*', cors(corsOptions));
 
 // Serve uploaded files
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -85,8 +84,9 @@ const PORT = process.env.PORT || 5000;
 const server = require('http').createServer(app);
 const io = require('socket.io')(server, {
   cors: {
-    origin: "*",
-    methods: ["GET", "POST"]
+    origin: allowedOrigins,
+    methods: ["GET", "POST"],
+    credentials: true
   }
 });
 
