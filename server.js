@@ -27,7 +27,7 @@ const defaultAllowedOrigins = [
   'https://www.masalamatrix.com',
 ];
 
-const envAllowedOrigins = (process.env.CORS_ORIGINS || '')
+const envAllowedOrigins = (process.env.REACT_APP_CORS_ORIGINS || '')
   .split(',')
   .map((origin) => origin.trim())
   .filter(Boolean);
@@ -61,20 +61,25 @@ app.options('*', cors(corsOptions));
 // Serve uploaded files
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
+const checkSubscription = require('./middleware/checkSubscription');
+
 // Routes
 app.use('/api/auth', require('./routes/auth'));
-app.use('/api/menu', require('./routes/menu'));
-app.use('/api/seating', require('./routes/seating'));
-app.use('/api/orders', require('./routes/orders'));
-app.use('/api/ai', require('./routes/ai'));
-app.use('/api/upload', require('./routes/upload'));
-app.use('/api/inventory', require('./routes/inventory'));
-app.use('/api/customers', require('./routes/customers'));
-app.use('/api/outlets', require('./routes/outlets'));
-app.use('/api/users', require('./routes/users'));
-app.use('/api/payments', require('./routes/payments'));
-app.use('/api/expenses', require('./routes/expenses'));
-app.use('/api/expense-reminders', require('./routes/expenseReminders'));
+app.use('/api/superadmin', require('./routes/superadmin'));
+
+// All restaurant routes check subscription status
+app.use('/api/menu', checkSubscription, require('./routes/menu'));
+app.use('/api/seating', checkSubscription, require('./routes/seating'));
+app.use('/api/orders', checkSubscription, require('./routes/orders'));
+app.use('/api/ai', checkSubscription, require('./routes/ai'));
+app.use('/api/upload', checkSubscription, require('./routes/upload'));
+app.use('/api/inventory', checkSubscription, require('./routes/inventory'));
+app.use('/api/customers', checkSubscription, require('./routes/customers'));
+app.use('/api/outlets', checkSubscription, require('./routes/outlets'));
+app.use('/api/users', checkSubscription, require('./routes/users'));
+app.use('/api/payments', checkSubscription, require('./routes/payments'));
+app.use('/api/expenses', checkSubscription, require('./routes/expenses'));
+app.use('/api/expense-reminders', checkSubscription, require('./routes/expenseReminders'));
 
 const PORT = process.env.PORT || 5000;
 const server = require('http').createServer(app);
