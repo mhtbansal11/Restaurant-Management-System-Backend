@@ -23,7 +23,8 @@ const defaultAllowedOrigins = [
   'http://localhost:5173',
   'http://localhost:3000',
   'http://localhost:5000',
-  'https://adaptable-white-hen.103-102-234-3.cpanel.site'
+  'https://masalamatrix.com',
+  'https://www.masalamatrix.com',
 ];
 
 const envAllowedOrigins = (process.env.CORS_ORIGINS || '')
