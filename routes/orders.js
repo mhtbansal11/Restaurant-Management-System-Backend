@@ -9,7 +9,7 @@ const Customer = require('../models/Customer');
 const router = express.Router();
 
 // Get order stats for dashboard
-router.get('/stats', [auth, checkRole(['superadmin', 'owner', 'manager'])], async (req, res) => {
+router.get('/stats', checkRole(['superadmin', 'owner', 'manager']), async (req, res) => {
   try {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -48,7 +48,7 @@ router.get('/stats', [auth, checkRole(['superadmin', 'owner', 'manager'])], asyn
 });
 
 // Get all orders
-router.get('/', auth, async (req, res) => {
+router.get('/', async (req, res) => {
   try {
     const { status, tableId } = req.query;
     const query = { restaurantName: req.user.restaurantName };
@@ -65,7 +65,7 @@ router.get('/', auth, async (req, res) => {
 });
 
 // Get order by ID
-router.get('/:id', auth, async (req, res) => {
+router.get('/:id', async (req, res) => {
   try {
     const order = await Order.findOne({ _id: req.params.id, restaurantName: req.user.restaurantName })
       .populate('items.menuItem');
@@ -79,7 +79,7 @@ router.get('/:id', auth, async (req, res) => {
 });
 
 // Create new order
-router.post('/', [auth, checkRole(['superadmin', 'owner', 'manager', 'cashier', 'receptionist', 'waiter'])], async (req, res) => {
+router.post('/', checkRole(['superadmin', 'owner', 'manager', 'cashier', 'receptionist', 'waiter']), async (req, res) => {
   try {
     const { tableIds, tableLabels, items, customerName, customerPhone, customerId, discountPercent, discountAmount, taxRate, taxAmount, serviceChargeRate, serviceChargeAmount, subtotal } = req.body;
 
@@ -204,7 +204,7 @@ router.post('/', [auth, checkRole(['superadmin', 'owner', 'manager', 'cashier', 
 });
 
 // Update order status
-router.put('/:id/status', [auth, checkRole(['superadmin', 'owner', 'manager', 'cashier', 'receptionist', 'kitchen_staff', 'waiter'])], async (req, res) => {
+router.put('/:id/status', checkRole(['superadmin', 'owner', 'manager', 'cashier', 'receptionist', 'kitchen_staff', 'waiter']), async (req, res) => {
   try {
     const { status, keepTableOccupied, freeTable } = req.body;
     const order = await Order.findOne({ _id: req.params.id, restaurantName: req.user.restaurantName });
@@ -318,7 +318,7 @@ router.put('/:id/status', [auth, checkRole(['superadmin', 'owner', 'manager', 'c
 });
 
 // Update order items
-router.put('/:id', [auth, checkRole(['superadmin', 'owner', 'manager', 'cashier', 'receptionist', 'waiter'])], async (req, res) => {
+router.put('/:id', checkRole(['superadmin', 'owner', 'manager', 'cashier', 'receptionist', 'waiter']), async (req, res) => {
   try {
     const order = await Order.findOne({ _id: req.params.id, restaurantName: req.user.restaurantName });
 
@@ -494,7 +494,7 @@ router.put('/:id', [auth, checkRole(['superadmin', 'owner', 'manager', 'cashier'
   }
 });
 
-router.patch('/:id/kot/printed', [auth, checkRole(['superadmin', 'owner', 'manager', 'cashier', 'receptionist', 'waiter'])], async (req, res) => {
+router.patch('/:id/kot/printed', checkRole(['superadmin', 'owner', 'manager', 'cashier', 'receptionist', 'waiter']), async (req, res) => {
   try {
     const order = await Order.findOne({ _id: req.params.id, restaurantName: req.user.restaurantName });
 
@@ -516,7 +516,7 @@ router.patch('/:id/kot/printed', [auth, checkRole(['superadmin', 'owner', 'manag
 });
 
 // Delete order
-router.delete('/:id', [auth, checkRole(['superadmin', 'owner', 'manager'])], async (req, res) => {
+router.delete('/:id', checkRole(['superadmin', 'owner', 'manager']), async (req, res) => {
   try {
     const order = await Order.findOne({ _id: req.params.id, restaurantName: req.user.restaurantName });
 
@@ -548,7 +548,7 @@ router.delete('/:id', [auth, checkRole(['superadmin', 'owner', 'manager'])], asy
 });
 
 // Update order item status (KDS)
-router.patch('/:id/item/:itemId/status', [auth, checkRole(['superadmin', 'owner', 'manager', 'kitchen_staff'])], async (req, res) => {
+router.patch('/:id/item/:itemId/status', checkRole(['superadmin', 'owner', 'manager', 'kitchen_staff']), async (req, res) => {
   try {
     const { status } = req.body;
     const order = await Order.findOne({ _id: req.params.id, restaurantName: req.user.restaurantName });
@@ -596,7 +596,7 @@ router.patch('/:id/item/:itemId/status', [auth, checkRole(['superadmin', 'owner'
 });
 
 // Settle/Pay order
-router.put('/:id/pay', [auth, checkRole(['superadmin', 'owner', 'manager', 'cashier', 'receptionist'])], async (req, res) => {
+router.put('/:id/pay', checkRole(['superadmin', 'owner', 'manager', 'cashier', 'receptionist']), async (req, res) => {
   try {
     const { paymentMode, paidAmount, customerId, keepTableOccupied, markCompleted, freeTable } = req.body;
     const order = await Order.findOne({ _id: req.params.id, restaurantName: req.user.restaurantName });
@@ -700,7 +700,7 @@ router.put('/:id/pay', [auth, checkRole(['superadmin', 'owner', 'manager', 'cash
 });
 
 // Settle partial due amount
-router.put('/:id/settle-due', [auth, checkRole(['superadmin', 'owner', 'manager', 'cashier', 'receptionist'])], async (req, res) => {
+router.put('/:id/settle-due', checkRole(['superadmin', 'owner', 'manager', 'cashier', 'receptionist']), async (req, res) => {
   try {
     const { settledAmount, paymentMode } = req.body;
     const order = await Order.findOne({ _id: req.params.id, restaurantName: req.user.restaurantName });

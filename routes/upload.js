@@ -2,7 +2,6 @@ const express = require('express');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-const auth = require('../middleware/auth');
 const { uploadToCloudinary } = require('../utils/cloudinary');
 const router = express.Router();
 
@@ -35,7 +34,7 @@ const upload = multer({
 });
 
 // Upload single image
-router.post('/', auth, upload.single('image'), async (req, res) => {
+router.post('/', upload.single('image'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ message: 'No image file provided' });

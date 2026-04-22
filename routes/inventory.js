@@ -8,7 +8,7 @@ const router = express.Router();
 // @route   GET /api/inventory/insights
 // @desc    Get AI-driven inventory insights
 // @access  Private
-router.get('/insights', [auth, checkRole(['superadmin', 'owner', 'manager'])], async (req, res) => {
+router.get('/insights', checkRole(['superadmin', 'owner', 'manager']), async (req, res) => {
   try {
     const items = await InventoryItem.find({ restaurantName: req.user.restaurantName });
     const insights = await getInventoryInsights(items, req.user._id);
@@ -20,7 +20,7 @@ router.get('/insights', [auth, checkRole(['superadmin', 'owner', 'manager'])], a
 });
 
 // Get all inventory items
-router.get('/', [auth, checkRole(['superadmin', 'owner', 'manager', 'kitchen_staff'])], async (req, res) => {
+router.get('/', checkRole(['superadmin', 'owner', 'manager', 'kitchen_staff']), async (req, res) => {
   try {
     const items = await InventoryItem.find({ restaurantName: req.user.restaurantName });
     res.json(items);
@@ -30,7 +30,7 @@ router.get('/', [auth, checkRole(['superadmin', 'owner', 'manager', 'kitchen_sta
 });
 
 // Create new inventory item
-router.post('/', [auth, checkRole(['superadmin', 'owner', 'manager'])], async (req, res) => {
+router.post('/', checkRole(['superadmin', 'owner', 'manager']), async (req, res) => {
   try {
     const item = new InventoryItem({
       ...req.body,
@@ -55,7 +55,7 @@ router.post('/', [auth, checkRole(['superadmin', 'owner', 'manager'])], async (r
 });
 
 // Update inventory item
-router.put('/:id', [auth, checkRole(['superadmin', 'owner', 'manager', 'kitchen_staff'])], async (req, res) => {
+router.put('/:id', checkRole(['superadmin', 'owner', 'manager', 'kitchen_staff']), async (req, res) => {
   try {
     const item = await InventoryItem.findOneAndUpdate(
       { _id: req.params.id, restaurantName: req.user.restaurantName },
@@ -80,7 +80,7 @@ router.put('/:id', [auth, checkRole(['superadmin', 'owner', 'manager', 'kitchen_
 });
 
 // Delete inventory item
-router.delete('/:id', [auth, checkRole(['superadmin', 'owner', 'manager'])], async (req, res) => {
+router.delete('/:id', checkRole(['superadmin', 'owner', 'manager']), async (req, res) => {
   try {
     const item = await InventoryItem.findOneAndDelete({ _id: req.params.id, restaurantName: req.user.restaurantName });
     if (!item) return res.status(404).json({ message: 'Item not found' });

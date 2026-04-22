@@ -38,7 +38,7 @@ const upload = multer({
 });
 
 // Get all staff members for the current restaurant/outlet
-router.get('/', [auth, checkRole(['superadmin', 'owner', 'manager'])], async (req, res) => {
+router.get('/', checkRole(['superadmin', 'owner', 'manager']), async (req, res) => {
   try {
     // If owner/manager, show all staff in their restaurant
     // If superadmin, they might see all (but for now let's keep it scoped)
@@ -55,7 +55,7 @@ router.get('/', [auth, checkRole(['superadmin', 'owner', 'manager'])], async (re
 });
 
 // Approve Aadhar (admin only)
-router.patch('/approve-aadhar/:userId', [auth, checkRole(['superadmin', 'owner', 'manager'])], async (req, res) => {
+router.patch('/approve-aadhar/:userId', checkRole(['superadmin', 'owner', 'manager']), async (req, res) => {
   try {
     const { userId } = req.params;
     
@@ -90,7 +90,7 @@ router.patch('/approve-aadhar/:userId', [auth, checkRole(['superadmin', 'owner',
 });
 
 // Reject Aadhar (admin only)
-router.patch('/reject-aadhar/:userId', [auth, checkRole(['superadmin', 'owner', 'manager'])], async (req, res) => {
+router.patch('/reject-aadhar/:userId', checkRole(['superadmin', 'owner', 'manager']), async (req, res) => {
   try {
     const { userId } = req.params;
     const { rejectionReason } = req.body;
@@ -126,7 +126,7 @@ router.patch('/reject-aadhar/:userId', [auth, checkRole(['superadmin', 'owner', 
 });
 
 // Create a new staff member
-router.post('/', [auth, checkRole(['superadmin', 'owner', 'manager'])], async (req, res) => {
+router.post('/', checkRole(['superadmin', 'owner', 'manager']), async (req, res) => {
   try {
     const { name, email, password, role } = req.body;
 
@@ -156,7 +156,7 @@ router.post('/', [auth, checkRole(['superadmin', 'owner', 'manager'])], async (r
 });
 
 // Update a staff member
-router.put('/:id', [auth, checkRole(['superadmin', 'owner', 'manager'])], async (req, res) => {
+router.put('/:id', checkRole(['superadmin', 'owner', 'manager']), async (req, res) => {
   try {
     const { name, email, role } = req.body;
     
@@ -177,7 +177,7 @@ router.put('/:id', [auth, checkRole(['superadmin', 'owner', 'manager'])], async 
 });
 
 // Delete a staff member
-router.delete('/:id', [auth, checkRole(['superadmin', 'owner', 'manager'])], async (req, res) => {
+router.delete('/:id', checkRole(['superadmin', 'owner', 'manager']), async (req, res) => {
   try {
     const user = await User.findOneAndDelete({ 
       _id: req.params.id, 
@@ -195,7 +195,7 @@ router.delete('/:id', [auth, checkRole(['superadmin', 'owner', 'manager'])], asy
 });
 
 // Get current user profile
-router.get('/profile', auth, async (req, res) => {
+router.get('/profile', async (req, res) => {
   try {
     const user = await User.findById(req.user._id).select('-password');
     res.json(user);
@@ -203,7 +203,7 @@ router.get('/profile', auth, async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 });
-router.patch('/notifications/:id/read', auth, async (req, res) => {
+router.patch('/notifications/:id/read', async (req, res) => {
   try {
     const notification = await Notification.findOneAndUpdate(
       {
@@ -228,7 +228,7 @@ router.patch('/notifications/:id/read', auth, async (req, res) => {
 
 
 // Get user by ID (admin only)
-router.get('/:id', [auth, checkRole(['superadmin', 'owner', 'manager'])], async (req, res) => {
+router.get('/:id', checkRole(['superadmin', 'owner', 'manager']), async (req, res) => {
   try {
     const { id } = req.params;
     
@@ -249,7 +249,7 @@ router.get('/:id', [auth, checkRole(['superadmin', 'owner', 'manager'])], async 
 });
 
 // Update user profile (own profile or admin updating staff)
-router.put('/:id?', auth, async (req, res) => {
+router.put('/:id?', async (req, res) => {
   try {
     const targetUserId = req.params.id || req.user._id;
     const { name, phone, address, dateOfBirth, gender, emergencyContact, aadharNumber } = req.body;
@@ -300,7 +300,7 @@ router.put('/:id?', auth, async (req, res) => {
 });
 
 // Upload Aadhar card (own profile or admin uploading for staff)
-router.post('/upload-aadhar', [auth, upload.single('aadhar')], async (req, res) => {
+router.post('/upload-aadhar', upload.single('aadhar'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ message: 'No file uploaded' });
@@ -355,10 +355,10 @@ router.post('/upload-aadhar', [auth, upload.single('aadhar')], async (req, res) 
 });
 
 // Submit complete Aadhar information (number + both sides)
-router.post('/submit-aadhar', [auth, upload.fields([
+router.post('/submit-aadhar', upload.fields([
   { name: 'aadharFront', maxCount: 1 },
   { name: 'aadharBack', maxCount: 1 }
-])], async (req, res) => {
+]), async (req, res) => {
   try {
     const { aadharNumber, userId } = req.body;
     const files = req.files;
@@ -417,7 +417,7 @@ router.post('/submit-aadhar', [auth, upload.fields([
 });
 
 // Toggle login authorization (admin only)
-router.patch('/:userId/login-auth', [auth, checkRole(['superadmin', 'owner', 'manager'])], async (req, res) => {
+router.patch('/:userId/login-auth', checkRole(['superadmin', 'owner', 'manager']), async (req, res) => {
   try {
     const { userId } = req.params;
     const { loginAuthorized } = req.body;
@@ -439,7 +439,7 @@ router.patch('/:userId/login-auth', [auth, checkRole(['superadmin', 'owner', 'ma
 });
 
 // Verify Aadhar (admin only)
-router.patch('/verify-aadhar/:userId', [auth, checkRole(['superadmin', 'owner', 'manager'])], async (req, res) => {
+router.patch('/verify-aadhar/:userId', checkRole(['superadmin', 'owner', 'manager']), async (req, res) => {
   try {
     const { userId } = req.params;
     
@@ -460,7 +460,7 @@ router.patch('/verify-aadhar/:userId', [auth, checkRole(['superadmin', 'owner', 
 });
 
 // Approve Aadhar (admin only)
-router.patch('/approve-aadhar/:userId', [auth, checkRole(['superadmin', 'owner', 'manager'])], async (req, res) => {
+router.patch('/approve-aadhar/:userId', checkRole(['superadmin', 'owner', 'manager']), async (req, res) => {
   try {
     const { userId } = req.params;
     
@@ -485,7 +485,7 @@ router.patch('/approve-aadhar/:userId', [auth, checkRole(['superadmin', 'owner',
 });
 
 // Reject Aadhar (admin only)
-router.patch('/reject-aadhar/:userId', [auth, checkRole(['superadmin', 'owner', 'manager'])], async (req, res) => {
+router.patch('/reject-aadhar/:userId', checkRole(['superadmin', 'owner', 'manager']), async (req, res) => {
   try {
     const { userId } = req.params;
     const { rejectionReason } = req.body;
@@ -511,7 +511,7 @@ router.patch('/reject-aadhar/:userId', [auth, checkRole(['superadmin', 'owner', 
 });
 
 // Get user notifications
-router.get('/notifications', auth, async (req, res) => {
+router.get('/notifications', async (req, res) => {
   try {
     if (!req.user || !req.user.restaurantName) {
       return res.status(400).json({ message: 'Restaurant context missing from user profile' });

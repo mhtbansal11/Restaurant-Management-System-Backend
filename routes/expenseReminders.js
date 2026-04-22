@@ -2,10 +2,9 @@ const express = require('express');
 const router = express.Router();
 const ExpenseReminder = require('../models/ExpenseReminder');
 const Expense = require('../models/Expense');
-const auth = require('../middleware/auth');
 
 // Get all reminders with filtering
-router.get('/', auth, async (req, res) => {
+router.get('/', async (req, res) => {
   try {
     const { status, category, priority, upcoming } = req.query;
     const restaurantName = req.user.restaurantName;
@@ -34,7 +33,7 @@ router.get('/', auth, async (req, res) => {
 });
 
 // Get specific reminder
-router.get('/:id', auth, async (req, res) => {
+router.get('/:id', async (req, res) => {
   try {
     const reminder = await ExpenseReminder.findOne({
       _id: req.params.id,
@@ -53,7 +52,7 @@ router.get('/:id', auth, async (req, res) => {
 });
 
 // Create new reminder
-router.post('/', auth, async (req, res) => {
+router.post('/', async (req, res) => {
   try {
     const {
       title,
@@ -103,7 +102,7 @@ router.post('/', auth, async (req, res) => {
 });
 
 // Update reminder
-router.put('/:id', auth, async (req, res) => {
+router.put('/:id', async (req, res) => {
   try {
     const reminder = await ExpenseReminder.findOneAndUpdate(
       {
@@ -132,7 +131,7 @@ router.put('/:id', auth, async (req, res) => {
 });
 
 // Delete reminder
-router.delete('/:id', auth, async (req, res) => {
+router.delete('/:id', async (req, res) => {
   try {
     const reminder = await ExpenseReminder.findOneAndDelete({
       _id: req.params.id,
@@ -151,7 +150,7 @@ router.delete('/:id', auth, async (req, res) => {
 });
 
 // Mark reminder as completed
-router.patch('/:id/complete', auth, async (req, res) => {
+router.patch('/:id/complete', async (req, res) => {
   try {
     const reminder = await ExpenseReminder.findOneAndUpdate(
       {
@@ -174,7 +173,7 @@ router.patch('/:id/complete', auth, async (req, res) => {
 });
 
 // Snooze reminder
-router.patch('/:id/snooze', auth, async (req, res) => {
+router.patch('/:id/snooze', async (req, res) => {
   try {
     const { days = 1 } = req.body;
     const reminder = await ExpenseReminder.findOne({
@@ -201,7 +200,7 @@ router.patch('/:id/snooze', auth, async (req, res) => {
 });
 
 // Get upcoming reminders for notifications
-router.get('/notifications/upcoming', auth, async (req, res) => {
+router.get('/notifications/upcoming', async (req, res) => {
   try {
     const reminders = await ExpenseReminder.getUpcomingReminders(req.user.restaurantName, 3); // Next 3 days
     res.json(reminders);
@@ -212,7 +211,7 @@ router.get('/notifications/upcoming', auth, async (req, res) => {
 });
 
 // Get overdue reminders
-router.get('/notifications/overdue', auth, async (req, res) => {
+router.get('/notifications/overdue', async (req, res) => {
   try {
     const reminders = await ExpenseReminder.getOverdueReminders(req.user.restaurantName);
     res.json(reminders);
@@ -223,7 +222,7 @@ router.get('/notifications/overdue', auth, async (req, res) => {
 });
 
 // Create reminder from expense template
-router.post('/from-template', auth, async (req, res) => {
+router.post('/from-template', async (req, res) => {
   try {
     const { expenseId, reminderType = 'before_due', reminderDays = 1 } = req.body;
     

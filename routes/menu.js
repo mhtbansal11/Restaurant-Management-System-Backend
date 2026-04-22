@@ -38,7 +38,7 @@ const upload = multer({
 });
 
 // Get all menu items
-router.get('/', auth, async (req, res) => {
+router.get('/', async (req, res) => {
   try {
     const menuItems = await MenuItem.find({ restaurantName: req.user.restaurantName }).sort({ createdAt: -1 });
     res.json(menuItems);
@@ -48,7 +48,7 @@ router.get('/', auth, async (req, res) => {
 });
 
 // Get menu item by ID
-router.get('/:id', auth, async (req, res) => {
+router.get('/:id', async (req, res) => {
   try {
     const menuItem = await MenuItem.findOne({ _id: req.params.id, restaurantName: req.user.restaurantName });
     if (!menuItem) {
@@ -61,7 +61,7 @@ router.get('/:id', auth, async (req, res) => {
 });
 
 // Create menu item from image (AI-powered)
-router.post('/ai-extract', [auth, checkRole(['superadmin', 'owner', 'manager'])], upload.single('image'), async (req, res) => {
+router.post('/ai-extract', checkRole(['superadmin', 'owner', 'manager']), upload.single('image'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ message: 'No image file provided' });
@@ -124,7 +124,7 @@ router.post('/ai-extract', [auth, checkRole(['superadmin', 'owner', 'manager'])]
 });
 
 // Create menu item manually
-router.post('/', [auth, checkRole(['superadmin', 'owner', 'manager'])], async (req, res) => {
+router.post('/', checkRole(['superadmin', 'owner', 'manager']), async (req, res) => {
   try {
     const { name, description, price, category, image, isAvailable, variants, ingredients } = req.body;
     let { hasVariants } = req.body;
@@ -167,7 +167,7 @@ router.post('/', [auth, checkRole(['superadmin', 'owner', 'manager'])], async (r
 });
 
 // Update menu item (Allow kitchen_staff to update for availability toggling)
-router.put('/:id', [auth, checkRole(['superadmin', 'owner', 'manager', 'kitchen_staff'])], async (req, res) => {
+router.put('/:id', checkRole(['superadmin', 'owner', 'manager', 'kitchen_staff']), async (req, res) => {
   try {
     const menuItem = await MenuItem.findOne({ _id: req.params.id, restaurantName: req.user.restaurantName });
     if (!menuItem) {
@@ -200,7 +200,7 @@ router.put('/:id', [auth, checkRole(['superadmin', 'owner', 'manager', 'kitchen_
 });
 
 // Delete menu item
-router.delete('/:id', [auth, checkRole(['superadmin', 'owner', 'manager'])], async (req, res) => {
+router.delete('/:id', checkRole(['superadmin', 'owner', 'manager']), async (req, res) => {
   try {
     const menuItem = await MenuItem.findOneAndDelete({ _id: req.params.id, restaurantName: req.user.restaurantName });
     if (!menuItem) {

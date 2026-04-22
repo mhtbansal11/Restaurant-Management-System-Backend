@@ -5,7 +5,7 @@ const Order = require('../models/Order');
 const auth = require('../middleware/auth');
 
 // Get all customers with search and CLV (Customer Lifetime Value)
-router.get('/', auth, async (req, res) => {
+router.get('/', async (req, res) => {
   try {
     const { search } = req.query;
     let query = { restaurantName: req.user.restaurantName };
@@ -48,7 +48,7 @@ router.get('/', auth, async (req, res) => {
 });
 
 // Get customer by phone
-router.get('/phone/:phone', auth, async (req, res) => {
+router.get('/phone/:phone', async (req, res) => {
   try {
     const customer = await Customer.findOne({ 
       restaurantName: req.user.restaurantName, 
@@ -62,7 +62,7 @@ router.get('/phone/:phone', auth, async (req, res) => {
 });
 
 // Create or update customer
-router.post('/', auth, async (req, res) => {
+router.post('/', async (req, res) => {
   try {
     const { name, phone, email, address, notes } = req.body;
     
@@ -94,7 +94,7 @@ router.post('/', auth, async (req, res) => {
 });
 
 // Get customer balance and history
-router.get('/:id/history', auth, async (req, res) => {
+router.get('/:id/history', async (req, res) => {
   try {
     const customer = await Customer.findOne({ 
       _id: req.params.id, 

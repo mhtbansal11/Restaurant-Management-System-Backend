@@ -6,7 +6,7 @@ const auth = require('../middleware/auth');
 const router = express.Router();
 
 // Get seating layout
-router.get('/layout', auth, async (req, res) => {
+router.get('/layout', async (req, res) => {
   try {
     let layout = await SeatingLayout.findOne({ restaurantName: req.user.restaurantName });
     if (!layout) {
@@ -42,7 +42,7 @@ router.get('/layout', auth, async (req, res) => {
 });
 
 // Save/Update seating layout
-router.post('/layout', auth, async (req, res) => {
+router.post('/layout', async (req, res) => {
   try {
     const { floors } = req.body; // Expecting { floors: [...] }
 
@@ -138,7 +138,7 @@ router.post('/layout', auth, async (req, res) => {
 });
 
 // Get all tables with their status
-router.get('/tables', auth, async (req, res) => {
+router.get('/tables', async (req, res) => {
   try {
     const tables = await Table.find({ restaurantName: req.user.restaurantName }).populate('currentOrder');
     res.json(tables);
@@ -148,7 +148,7 @@ router.get('/tables', auth, async (req, res) => {
 });
 
 // Update table status
-router.put('/tables/:tableId', auth, async (req, res) => {
+router.put('/tables/:tableId', async (req, res) => {
   try {
     const { status, customerCount, currentOrder, forceClear, reservation } = req.body;
 

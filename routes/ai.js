@@ -1,6 +1,5 @@
 const express = require('express');
 const router = express.Router();
-const auth = require('../middleware/auth');
 const MenuItem = require('../models/MenuItem');
 const { getUpsellRecommendations } = require('../services/ai/recommendationService');
 const { getDemandForecast } = require('../services/ai/forecastingService');
@@ -10,7 +9,7 @@ const { getOperationalInsights } = require('../services/ai/operationalService');
 // @route   POST /api/ai/chat
 // @desc    Chat with AI assistant
 // @access  Private
-router.post('/chat', auth, async (req, res) => {
+router.post('/chat', async (req, res) => {
   try {
     const { message, history } = req.body;
     
@@ -31,7 +30,7 @@ router.post('/chat', auth, async (req, res) => {
 // @route   POST /api/ai/recommend
 // @desc    Get AI-driven upselling recommendations based on cart
 // @access  Private
-router.post('/recommend', auth, async (req, res) => {
+router.post('/recommend', async (req, res) => {
   try {
     const { cartItems } = req.body;
 
@@ -55,7 +54,7 @@ router.post('/recommend', auth, async (req, res) => {
 // @route   GET /api/ai/forecast
 // @desc    Get sales forecast for next N days
 // @access  Private
-router.get('/forecast', auth, async (req, res) => {
+router.get('/forecast', async (req, res) => {
   try {
     const days = parseInt(req.query.days) || 7;
     const forecast = await getDemandForecast(req.user.id, days);
@@ -69,7 +68,7 @@ router.get('/forecast', auth, async (req, res) => {
 // @route   GET /api/ai/operational-insights
 // @desc    Get operational intelligence insights
 // @access  Private
-router.get('/operational-insights', auth, async (req, res) => {
+router.get('/operational-insights', async (req, res) => {
   try {
     const insights = await getOperationalInsights(req.user.id);
     res.json(insights);

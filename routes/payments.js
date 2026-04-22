@@ -2,10 +2,9 @@ const express = require('express');
 const router = express.Router();
 const Order = require('../models/Order');
 const Customer = require('../models/Customer');
-const auth = require('../middleware/auth');
 
 // Get payments with filtering
-router.get('/', auth, async (req, res) => {
+router.get('/', async (req, res) => {
   try {
     const { period = 'today', paymentType, customerStatus, search } = req.query;
     const restaurantName = req.user.restaurantName;
@@ -172,7 +171,7 @@ router.get('/', auth, async (req, res) => {
 });
 
 // Get payment analytics
-router.get('/analytics', auth, async (req, res) => {
+router.get('/analytics', async (req, res) => {
   try {
     const restaurantName = req.user.restaurantName;
     const { period = 'month' } = req.query;

@@ -61,24 +61,25 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 const checkSubscription = require('./middleware/checkSubscription');
+const auth = require('./middleware/auth');
 
 // Routes
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/superadmin', require('./routes/superadmin'));
 
-// All restaurant routes check subscription status
-app.use('/api/menu', checkSubscription, require('./routes/menu'));
-app.use('/api/seating', checkSubscription, require('./routes/seating'));
-app.use('/api/orders', checkSubscription, require('./routes/orders'));
-app.use('/api/ai', checkSubscription, require('./routes/ai'));
-app.use('/api/upload', checkSubscription, require('./routes/upload'));
-app.use('/api/inventory', checkSubscription, require('./routes/inventory'));
-app.use('/api/customers', checkSubscription, require('./routes/customers'));
-app.use('/api/outlets', checkSubscription, require('./routes/outlets'));
-app.use('/api/users', checkSubscription, require('./routes/users'));
-app.use('/api/payments', checkSubscription, require('./routes/payments'));
-app.use('/api/expenses', checkSubscription, require('./routes/expenses'));
-app.use('/api/expense-reminders', checkSubscription, require('./routes/expenseReminders'));
+// All restaurant routes: auth first so checkSubscription can read req.user
+app.use('/api/menu', auth, checkSubscription, require('./routes/menu'));
+app.use('/api/seating', auth, checkSubscription, require('./routes/seating'));
+app.use('/api/orders', auth, checkSubscription, require('./routes/orders'));
+app.use('/api/ai', auth, checkSubscription, require('./routes/ai'));
+app.use('/api/upload', auth, checkSubscription, require('./routes/upload'));
+app.use('/api/inventory', auth, checkSubscription, require('./routes/inventory'));
+app.use('/api/customers', auth, checkSubscription, require('./routes/customers'));
+app.use('/api/outlets', auth, checkSubscription, require('./routes/outlets'));
+app.use('/api/users', auth, checkSubscription, require('./routes/users'));
+app.use('/api/payments', auth, checkSubscription, require('./routes/payments'));
+app.use('/api/expenses', auth, checkSubscription, require('./routes/expenses'));
+app.use('/api/expense-reminders', auth, checkSubscription, require('./routes/expenseReminders'));
 
 const PORT = process.env.PORT || 5000;
 const server = require('http').createServer(app);

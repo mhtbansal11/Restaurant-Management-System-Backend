@@ -5,7 +5,7 @@ const Order = require('../models/Order');
 const auth = require('../middleware/auth');
 
 // Get all expenses with filtering
-router.get('/', auth, async (req, res) => {
+router.get('/', async (req, res) => {
   try {
     const { period = 'month', category, status, search } = req.query;
     const restaurantName = req.user.restaurantName;
@@ -60,7 +60,7 @@ router.get('/', auth, async (req, res) => {
 });
 
 // Get expense statistics
-router.get('/stats/summary', auth, async (req, res) => {
+router.get('/stats/summary', async (req, res) => {
   try {
     const { period = 'month' } = req.query;
     const restaurantName = req.user.restaurantName;
@@ -97,7 +97,7 @@ router.get('/stats/summary', auth, async (req, res) => {
 });
 
 // AI Budget Alerts
-router.get('/stats/alerts', auth, async (req, res) => {
+router.get('/stats/alerts', async (req, res) => {
   try {
     const restaurantName = req.user.restaurantName;
     const thirtyDaysAgo = new Date(new Date().setDate(new Date().getDate() - 30));
@@ -141,7 +141,7 @@ router.get('/stats/alerts', auth, async (req, res) => {
 });
 
 // Standard CRUD (Simplified)
-router.post('/', auth, async (req, res) => {
+router.post('/', async (req, res) => {
   try {
     const expense = new Expense({ ...req.body, userId: req.user.id, restaurantName: req.user.restaurantName });
     await expense.save();
@@ -156,7 +156,7 @@ router.post('/', auth, async (req, res) => {
   } catch (error) { res.status(500).json({ message: 'Server error' }); }
 });
 
-router.put('/:id', auth, async (req, res) => {
+router.put('/:id', async (req, res) => {
   try {
     const expense = await Expense.findOneAndUpdate({ _id: req.params.id, restaurantName: req.user.restaurantName }, req.body, { new: true });
     if (!expense) return res.status(404).json({ message: 'Not found' });
@@ -164,7 +164,7 @@ router.put('/:id', auth, async (req, res) => {
   } catch (error) { res.status(500).json({ message: 'Server error' }); }
 });
 
-router.delete('/:id', auth, async (req, res) => {
+router.delete('/:id', async (req, res) => {
   try {
     const expense = await Expense.findOneAndDelete({ _id: req.params.id, restaurantName: req.user.restaurantName });
     if (!expense) return res.status(404).json({ message: 'Not found' });

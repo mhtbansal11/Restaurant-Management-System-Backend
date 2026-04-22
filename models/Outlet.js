@@ -2,8 +2,9 @@ const mongoose = require('mongoose');
 
 const outletSchema = new mongoose.Schema({
   name: { type: String, required: true },
-  address: { type: String, required: true },
-  phone: { type: String, required: true },
+  address: { type: String, default: '' },
+  phone: { type: String, default: '' },
+  createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
   email: { type: String, default: '' },
   ownerName: { type: String, default: '' },
   isActive: { type: Boolean, default: true },
