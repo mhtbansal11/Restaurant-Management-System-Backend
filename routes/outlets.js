@@ -6,6 +6,19 @@ const router = express.Router();
 
 const ALLOWED_OUTLET_FIELDS = ['name', 'address', 'phone', 'email', 'ownerName', 'settings'];
 
+// Diagnostic: returns exactly what the server sees for this user (remove after debugging)
+router.get('/whoami', async (req, res) => {
+  const outlet = req.user.outletId ? await Outlet.findById(req.user.outletId).lean() : null;
+  res.json({
+    userId: req.user._id,
+    role: req.user.role,
+    loginAuthorized: req.user.loginAuthorized,
+    outletId: req.user.outletId,
+    subscriptionStatus: outlet?.subscriptionStatus,
+    subscriptionEndDate: outlet?.subscriptionEndDate,
+  });
+});
+
 // Get current outlet settings
 router.get('/current', async (req, res) => {
   try {

@@ -9,6 +9,11 @@ PassengerStartupFile server.js
 Options -MultiViews
 RewriteEngine On
 
+# Allow all HTTP methods (PUT, PATCH, DELETE) required by the REST API
+<IfModule mod_security.c>
+  SecRuleEngine Off
+</IfModule>
+
 # Redirect HTTP to HTTPS
 RewriteCond %{HTTPS} off
 RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
