@@ -17,8 +17,9 @@ router.get('/current', async (req, res) => {
       if (!outlet) {
         outlet = new Outlet({
           name: req.user.restaurantName || 'My Restaurant',
+          ownerName: req.user.name || '',
+          phone: req.user.phone || '',
           address: '',
-          phone: '',
           createdBy: req.user._id
         });
         await outlet.save();

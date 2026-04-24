@@ -25,6 +25,12 @@ const auth = async (req, res, next) => {
       return res.status(403).json({ message: 'Your account access has been revoked. Contact your manager.' });
     }
 
+    // Fallback: if role missing from DB, self-registered users are always owners — persist it
+    if (!user.role) {
+      user.role = 'owner';
+      await User.findByIdAndUpdate(user._id, { role: 'owner' });
+    }
+
     req.user = user;
     next();
   } catch (error) {
