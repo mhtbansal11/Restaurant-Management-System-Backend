@@ -10,8 +10,8 @@ async function checkSubscription(req, res, next) {
     const outlet = await Outlet.findById(user.outletId);
     if (!outlet) return next();
 
-    // Auto-mark expired
-    if (outlet.subscriptionEndDate < new Date() && outlet.subscriptionStatus === 'active') {
+    // Auto-mark expired for both active and trial outlets whose end date has passed
+    if (outlet.subscriptionEndDate < new Date() && ['active', 'trial'].includes(outlet.subscriptionStatus)) {
       outlet.subscriptionStatus = 'expired';
       outlet.paymentStatus = 'overdue';
       await outlet.save();

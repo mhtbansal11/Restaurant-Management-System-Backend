@@ -12,17 +12,23 @@ const superadminAuth = async (req, res, next) => {
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    // Accept both the hard-coded superadmin and DB users with superadmin role
-    if (decoded.isSuperAdmin) {
-      req.superAdmin = { email: SUPERADMIN_EMAIL, role: 'superadmin' };
-      return next();
-    }
-
-    const user = await User.findById(decoded.userId).select('-password');
-    if (!user || user.role !== 'superadmin') {
+    // Token issued by superadmin login — isSuperAdmin flag is always present
+    if (!decoded.isSuperAdmin) {
       return res.status(403).json({ message: 'Superadmin access required' });
     }
-    req.superAdmin = user;
+
+    // If the token carries a userId it belongs to a DB superadmin — verify role still holds
+    if (decoded.userId) {
+      const user = await User.findById(decoded.userId).select('-password');
+      if (!user || user.role !== 'superadmin') {
+        return res.status(403).json({ message: 'Superadmin access required' });
+      }
+      req.superAdmin = user;
+    } else {
+      // Hardcoded admin token (no userId)
+      req.superAdmin = { email: SUPERADMIN_EMAIL, role: 'superadmin' };
+    }
+
     next();
   } catch (err) {
     res.status(401).json({ message: 'Token is not valid' });

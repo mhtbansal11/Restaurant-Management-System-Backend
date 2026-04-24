@@ -140,6 +140,83 @@ router.get('/stats/alerts', async (req, res) => {
   }
 });
 
+// Profit & Loss calculation
+router.get('/stats/profit-loss', async (req, res) => {
+  try {
+    const { period = 'month' } = req.query;
+    const restaurantName = req.user.restaurantName;
+    const now = new Date();
+    let startDate = new Date();
+
+    switch (period) {
+      case 'today':   startDate.setHours(0, 0, 0, 0); break;
+      case 'week':    startDate.setDate(now.getDate() - 7); break;
+      case 'month':   startDate.setMonth(now.getMonth() - 1); break;
+      case 'quarter': startDate.setMonth(now.getMonth() - 3); break;
+      case 'year':    startDate.setFullYear(now.getFullYear() - 1); break;
+      default:        startDate.setMonth(now.getMonth() - 1);
+    }
+
+    const [revenueData, dueData, expenseData] = await Promise.all([
+      Order.aggregate([
+        {
+          $match: {
+            restaurantName,
+            createdAt: { $gte: startDate },
+            paymentStatus: { $in: ['paid', 'partially_paid'] }
+          }
+        },
+        {
+          $group: {
+            _id: null,
+            totalRevenue: { $sum: '$paidAmount' },
+            orderCount: { $sum: 1 }
+          }
+        }
+      ]),
+      Order.aggregate([
+        {
+          $match: {
+            restaurantName,
+            createdAt: { $gte: startDate },
+            dueAmount: { $gt: 0 }
+          }
+        },
+        { $group: { _id: null, totalDueAmount: { $sum: '$dueAmount' } } }
+      ]),
+      Expense.aggregate([
+        {
+          $match: {
+            restaurantName,
+            date: { $gte: startDate },
+            status: 'paid'
+          }
+        },
+        {
+          $group: {
+            _id: null,
+            totalExpenses: { $sum: '$amount' },
+            expenseCount: { $sum: 1 }
+          }
+        }
+      ])
+    ]);
+
+    const totalRevenue  = revenueData[0]?.totalRevenue   || 0;
+    const totalDueAmount = dueData[0]?.totalDueAmount    || 0;
+    const totalExpenses  = expenseData[0]?.totalExpenses  || 0;
+    const orderCount     = revenueData[0]?.orderCount     || 0;
+    const expenseCount   = expenseData[0]?.expenseCount   || 0;
+    const netProfit      = totalRevenue - totalExpenses;
+    const profitMargin   = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0;
+
+    res.json({ totalRevenue, totalDueAmount, totalExpenses, netProfit, profitMargin, orderCount, expenseCount });
+  } catch (error) {
+    console.error('Error fetching P&L data:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 // Standard CRUD (Simplified)
 router.post('/', async (req, res) => {
   try {

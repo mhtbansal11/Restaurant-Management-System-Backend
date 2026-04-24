@@ -16,9 +16,13 @@ const auth = async (req, res, next) => {
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const user = await User.findById(decoded.userId).select('-password');
-    
+
     if (!user) {
       return res.status(401).json({ message: 'Token is not valid' });
+    }
+
+    if (user.loginAuthorized === false) {
+      return res.status(403).json({ message: 'Your account access has been revoked. Contact your manager.' });
     }
 
     req.user = user;
