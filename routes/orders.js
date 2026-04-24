@@ -548,7 +548,7 @@ router.delete('/:id', checkRole(['superadmin', 'owner', 'manager']), async (req,
 });
 
 // Update order item status (KDS)
-router.patch('/:id/item/:itemId/status', checkRole(['superadmin', 'owner', 'manager', 'kitchen_staff']), async (req, res) => {
+router.patch('/:id/item/:itemId/status', checkRole(['superadmin', 'owner', 'manager', 'kitchen_staff', 'cashier', 'receptionist', 'waiter']), async (req, res) => {
   try {
     const { status } = req.body;
     const order = await Order.findOne({ _id: req.params.id, restaurantName: req.user.restaurantName });

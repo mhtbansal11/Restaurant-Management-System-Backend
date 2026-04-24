@@ -33,7 +33,7 @@ router.get('/current', async (req, res) => {
 });
 
 // Update outlet settings
-router.put('/current', checkRole(['superadmin', 'owner']), async (req, res) => {
+router.put('/current', checkRole(['superadmin', 'owner', 'manager']), async (req, res) => {
   try {
     const update = {};
     ALLOWED_OUTLET_FIELDS.forEach(f => { if (req.body[f] !== undefined) update[f] = req.body[f]; });
